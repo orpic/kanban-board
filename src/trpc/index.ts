@@ -1,12 +1,31 @@
 import { db } from "@/db";
 import { z } from "zod";
 import { publicProcedure, router } from "./trpc";
+import { TRPCError } from "@trpc/server";
 
 export const appRouter = router({
   // ...
   getKanbanBoardsList: publicProcedure.query(async () => {
     return await db.kanban.findMany();
   }),
+
+  getSingleKanbanDetails: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { id } = input;
+
+      const kanbanDetails = await db.kanban.findFirst({
+        where: {
+          id: id,
+        },
+      });
+
+      return kanbanDetails;
+    }),
 
   createNewKanban: publicProcedure
     .input(
@@ -93,6 +112,95 @@ export const appRouter = router({
       });
 
       return deleted;
+    }),
+
+  createSingleColumn: publicProcedure
+    .input(
+      z.object({
+        kanbanId: z.string(),
+        name: z.string().min(3),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { kanbanId, name } = input;
+
+      const kanbanDetails = await db.kanban.findFirst({
+        where: {
+          id: kanbanId,
+        },
+      });
+
+      if (!kanbanDetails)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No kanban Exist with this id",
+        });
+
+      const addedColumn = await db.kanbanColumn.create({
+        data: {
+          name: name,
+          kanbanId: kanbanId,
+        },
+      });
+
+      return addedColumn;
+    }),
+
+  getColumnsOfkanbanBoard: publicProcedure
+    .input(
+      z.object({
+        kanbanId: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { kanbanId } = input;
+      const columns = await db.kanbanColumn.findMany({
+        where: {
+          kanbanId: kanbanId,
+        },
+      });
+
+      return columns;
+    }),
+
+  editSingleColumnName: publicProcedure
+    .input(
+      z.object({
+        columnId: z.string(),
+        name: z.string().min(3),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { columnId, name } = input;
+
+      const columnChanged = await db.kanbanColumn.update({
+        where: {
+          id: columnId,
+        },
+        data: {
+          name: name,
+        },
+      });
+
+      return columnChanged;
+    }),
+
+  deleteSingleColumn: publicProcedure
+    .input(
+      z.object({
+        columnId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { columnId } = input;
+
+      const deletedColumn = await db.kanbanColumn.delete({
+        where: {
+          id: columnId,
+        },
+      });
+
+      return deletedColumn;
     }),
 });
 

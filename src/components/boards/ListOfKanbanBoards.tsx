@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { useToast } from "../ui/use-toast";
 import { Textarea } from "../ui/textarea";
+import Link from "next/link";
 
 const ListOfKanbanBoards = () => {
   const { toast } = useToast();
@@ -53,13 +54,15 @@ const ListOfKanbanBoards = () => {
                 >
                   <p className="truncate pl-2 font-semibold">{each.name}</p>
                   <div className="flex gap-2">
-                    <Button
-                      onClick={() => {
-                        //open the kanban board page
-                      }}
-                    >
-                      Open
-                    </Button>
+                    <Link href={`/kanbanid/${encodeURIComponent(each.id)}`}>
+                      <Button
+                        onClick={() => {
+                          //open the kanban board page
+                        }}
+                      >
+                        Open
+                      </Button>
+                    </Link>
                     <EditButton
                       id={each.id}
                       name={each.name}
