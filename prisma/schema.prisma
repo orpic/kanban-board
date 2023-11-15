@@ -21,7 +21,7 @@ model KanbanColumn {
   id       String       @id @default(cuid()) @map("_id")
   name     String
   Kanban   Kanban?      @relation(fields: [kanbanId], references: [id])
-  kanbanId String
+  kanbanId String?
   items    KanbanItem[]
 }
 
@@ -31,5 +31,5 @@ model KanbanItem {
   description    String
   dueDate        DateTime?
   KanbanColumn   KanbanColumn? @relation(fields: [kanbanColumnId], references: [id])
-  kanbanColumnId String
+  kanbanColumnId String?
 }

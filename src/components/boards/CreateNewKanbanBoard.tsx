@@ -52,7 +52,8 @@ const CreateNewKanban = ({
   const { mutate: createNewKanban, isLoading: isCreateNewKanbanLoading } =
     trpc.createNewKanban.useMutation({
       onSuccess(data, variables, context) {
-        console.log(data);
+        // console.log(data);
+        setIsOpen(false);
         utils.getKanbanBoardsList.invalidate();
       },
       onError(error, variables, context) {
