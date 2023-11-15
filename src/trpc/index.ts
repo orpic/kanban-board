@@ -202,6 +202,51 @@ export const appRouter = router({
 
       return deletedColumn;
     }),
+
+  getAllItemsOfAColumn: publicProcedure
+    .input(
+      z.object({
+        columnId: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { columnId } = input;
+
+      const allColumnItems = await db.kanbanItem.findMany({
+        where: {
+          kanbanColumnId: columnId,
+        },
+      });
+
+      return allColumnItems;
+    }),
+
+  addSingleItemInColumn: publicProcedure
+    .input(
+      z.object({
+        columnId: z.string(),
+        name: z.string().min(3),
+        description: z.string().min(5),
+        dueDate: z
+          .string()
+          .transform((str) => new Date(str))
+          .optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { columnId, name, description, dueDate } = input;
+
+      const createdItem = await db.kanbanItem.create({
+        data: {
+          kanbanColumnId: columnId,
+          name: name,
+          description: description,
+          dueDate: dueDate,
+        },
+      });
+
+      return createdItem;
+    }),
 });
 
 // Export type router type signature,
