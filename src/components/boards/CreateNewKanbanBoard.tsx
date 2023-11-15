@@ -43,7 +43,8 @@ const CreateNewKanban = ({
   const [kanbanDescription, setKanbanDescription] = useState("");
 
   return (
-    <div className="mt-4 flex flex-col gap-4">
+    <div className="mt-1 flex flex-col gap-4">
+      <h2 className="mx-auto font-semibold">Kanban board in creation..</h2>
       <Input
         placeholder="Name of kanban board"
         value={kanbanName}

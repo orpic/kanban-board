@@ -1,0 +1,35 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Kanban {
+  id          String         @id @default(cuid()) @map("_id")
+  name        String
+  description String
+  columns     KanbanColumn[]
+}
+
+model KanbanColumn {
+  id       String       @id @default(cuid()) @map("_id")
+  name     String
+  Kanban   Kanban?      @relation(fields: [kanbanId], references: [id])
+  kanbanId String?
+  items    KanbanItem[]
+}
+
+model KanbanItem {
+  id             String        @id @default(cuid()) @map("_id")
+  name           String
+  description    String
+  dueDate        DateTime?
+  KanbanColumn   KanbanColumn? @relation(fields: [kanbanColumnId], references: [id])
+  kanbanColumnId String?
+}
