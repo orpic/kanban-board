@@ -493,7 +493,7 @@ const ItemsOfColumn = ({
           </div>
 
           <div className="w-full flex flex-col">
-            <div className="">{itemDescription}shobhit</div>
+            <div className="">{itemDescription}</div>
             <div className=" ">
               <p className="text-center bg-zinc-800 w-max mx-auto mt-2 px-2 rounded-md text-zinc-200">
                 {dueDate ? `Due date: ${dueDate}` : "No due date"}
