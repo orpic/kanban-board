@@ -294,6 +294,29 @@ export const appRouter = router({
 
       return deletedItem;
     }),
+
+  dragnDropItemBetweenColumns: publicProcedure
+    .input(
+      z.object({
+        itemId: z.string(),
+        sourceColumnId: z.string(),
+        destinationColumnId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { itemId, sourceColumnId, destinationColumnId } = input;
+
+      const itemMoved = await db.kanbanItem.update({
+        where: {
+          id: itemId,
+        },
+        data: {
+          kanbanColumnId: destinationColumnId,
+        },
+      });
+
+      return itemMoved;
+    }),
 });
 
 // Export type router type signature,

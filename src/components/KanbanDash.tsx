@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, LegacyRef, SetStateAction, useState } from "react";
 import MaxWidthWrapper from "./MaxWidthWrapper";
 import { Button, buttonVariants } from "./ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { Calendar } from "./ui/calendar";
+import { Draggable, Droppable, DroppableProvided } from "react-beautiful-dnd";
 
 interface KanbanDashProps {
   kanbanDetails: {
@@ -152,12 +153,24 @@ const KanbanBoards = ({
   return (
     <div className=" flex flex-wrap gap-4 ">
       {kanbanColumns.map((eachKanbanColumn) => (
-        <KanbanColumns
-          key={eachKanbanColumn.id}
-          id={eachKanbanColumn.id}
-          name={eachKanbanColumn.name}
-          kanbanId={eachKanbanColumn.kanbanId!}
-        />
+        <Droppable key={eachKanbanColumn.id} droppableId={eachKanbanColumn.id}>
+          {(provided) => (
+            <div
+              key={eachKanbanColumn.id}
+              className=""
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              <KanbanColumns
+                key={eachKanbanColumn.id}
+                id={eachKanbanColumn.id}
+                name={eachKanbanColumn.name}
+                kanbanId={eachKanbanColumn.kanbanId!}
+                provided={provided}
+              />
+            </div>
+          )}
+        </Droppable>
       ))}
     </div>
   );
@@ -167,10 +180,12 @@ const KanbanColumns = ({
   id,
   name,
   kanbanId,
+  provided,
 }: {
   id: string;
   name: string;
   kanbanId: string;
+  provided: DroppableProvided;
 }) => {
   const [deletingId, setDeletingId] = useState("");
   const { toast } = useToast();
@@ -231,8 +246,9 @@ const KanbanColumns = ({
         <div className="flex flex-col gap-2">
           {Array.isArray(allItemsOfAColumn) &&
             allItemsOfAColumn.length > 0 &&
-            allItemsOfAColumn.map((eachItem) => (
+            allItemsOfAColumn.map((eachItem, index) => (
               <ItemsOfColumn
+                index={index}
                 key={eachItem.id}
                 itemId={eachItem.id}
                 itemName={eachItem.name}
@@ -240,6 +256,7 @@ const KanbanColumns = ({
                 dueDate={eachItem.dueDate ? eachItem.dueDate : null}
               />
             ))}
+          {provided.placeholder}
         </div>
         <AddItemToAColumn columnId={id} />
       </div>
@@ -395,11 +412,13 @@ const DialogContentForItemCreation = ({
 };
 
 const ItemsOfColumn = ({
+  index,
   itemId,
   itemName,
   itemDescription,
   dueDate,
 }: {
+  index: number;
   itemId: string;
   itemName: string;
   itemDescription: string;
@@ -424,54 +443,66 @@ const ItemsOfColumn = ({
     },
   });
   return (
-    <div className="w-full bg-zinc-300 p-2">
-      <div className="flex justify-between items-center border-b pb-1 border-zinc-700">
-        <p className="text-lg font-semibold">{itemName}</p>
-        <div className="flex gap-2 items-center">
-          <EditSingleItem
-            itemId={itemId}
-            itemName={itemName}
-            itemDescription={itemDescription}
-            dueDate={dueDate}
-          />
-          {deletingId !== itemId && (
-            <Button
-              onClick={() => {
-                //
-                setDeletingId(itemId);
-                deleteSingleItemInColumn({
-                  itemId: itemId,
-                });
-              }}
-              variant={"destructive"}
-              className="p-2 py-0 h-min"
-            >
-              Delete
-            </Button>
-          )}
-          {isLoadingDeleteSingleItemInColumn && deletingId === itemId && (
-            <Button
-              className="p-2 py-0 h-5"
-              onClick={() => {
-                //
-                // deleteSingleKanbanBoard({
-                //   id: each.id,
-                // });
-              }}
-              variant={"destructive"}
-            >
-              <Loader2 className="h-5 py-[1px]  w-10 animate-spin" />
-            </Button>
-          )}
+    <Draggable draggableId={itemId} index={index}>
+      {(provided) => (
+        <div
+          className="w-full bg-zinc-300 p-2 "
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          ref={provided.innerRef}
+        >
+          <div className="flex justify-between items-center border-b pb-1 border-zinc-700">
+            <p className="text-lg font-semibold">{itemName}</p>
+            <div className="flex gap-2 items-center">
+              <EditSingleItem
+                itemId={itemId}
+                itemName={itemName}
+                itemDescription={itemDescription}
+                dueDate={dueDate}
+              />
+              {deletingId !== itemId && (
+                <Button
+                  onClick={() => {
+                    //
+                    setDeletingId(itemId);
+                    deleteSingleItemInColumn({
+                      itemId: itemId,
+                    });
+                  }}
+                  variant={"destructive"}
+                  className="p-2 py-0 h-min"
+                >
+                  Delete
+                </Button>
+              )}
+              {isLoadingDeleteSingleItemInColumn && deletingId === itemId && (
+                <Button
+                  className="p-2 py-0 h-5"
+                  onClick={() => {
+                    //
+                    // deleteSingleKanbanBoard({
+                    //   id: each.id,
+                    // });
+                  }}
+                  variant={"destructive"}
+                >
+                  <Loader2 className="h-5 py-[1px]  w-10 animate-spin" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="w-full flex flex-col">
+            <div className="">{itemDescription}shobhit</div>
+            <div className=" ">
+              <p className="text-center bg-zinc-800 w-max mx-auto mt-2 px-2 rounded-md text-zinc-200">
+                {dueDate ? `Due date: ${dueDate}` : "No due date"}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="">{itemDescription}</div>
-      <div className=" ">
-        <p className="text-center bg-zinc-800 w-max mx-auto mt-2 px-2 rounded-md text-zinc-200">
-          {dueDate ? `Due date: ${dueDate}` : "No due date"}
-        </p>
-      </div>
-    </div>
+      )}
+    </Draggable>
   );
 };
 
