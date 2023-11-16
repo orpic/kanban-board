@@ -229,7 +229,7 @@ export const appRouter = router({
         description: z.string().min(5),
         dueDate: z
           .string()
-          .transform((str) => new Date(str))
+
           .optional(),
       })
     )
@@ -246,6 +246,53 @@ export const appRouter = router({
       });
 
       return createdItem;
+    }),
+
+  editSingleItemInColumn: publicProcedure
+    .input(
+      z.object({
+        itemId: z.string(),
+        newItemName: z.string(),
+        newItemDescription: z.string(),
+        newDueDate: z
+          .string()
+
+          .optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { itemId, newItemName, newItemDescription, newDueDate } = input;
+
+      const itemChanged = await db.kanbanItem.update({
+        where: {
+          id: itemId,
+        },
+        data: {
+          name: newItemName,
+          description: newItemDescription,
+          dueDate: newDueDate,
+        },
+      });
+
+      return itemChanged;
+    }),
+
+  deleteSingleItemInColumn: publicProcedure
+    .input(
+      z.object({
+        itemId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { itemId } = input;
+
+      const deletedItem = await db.kanbanItem.delete({
+        where: {
+          id: itemId,
+        },
+      });
+
+      return deletedItem;
     }),
 });
 

@@ -11,7 +11,7 @@ import { Loader2, LucidePlus, Calendar as CalendarIcon } from "lucide-react";
 import { Textarea } from "./ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { Calendar } from "./ui/calendar";
 
 interface KanbanDashProps {
@@ -237,7 +237,7 @@ const KanbanColumns = ({
                 itemId={eachItem.id}
                 itemName={eachItem.name}
                 itemDescription={eachItem.description}
-                dueDate={eachItem.dueDate ? new Date(eachItem.dueDate) : null}
+                dueDate={eachItem.dueDate ? eachItem.dueDate : null}
               />
             ))}
         </div>
@@ -270,16 +270,26 @@ const AddItemToAColumn = ({ columnId }: { columnId: string }) => {
         </div>
       </DialogTrigger>
       <DialogContent>
-        <DialogContentForItemCreation columnId={columnId} />
+        <DialogContentForItemCreation
+          columnId={columnId}
+          setIsOpen={setIsOpen}
+        />
       </DialogContent>
     </Dialog>
   );
 };
 
-const DialogContentForItemCreation = ({ columnId }: { columnId: string }) => {
+const DialogContentForItemCreation = ({
+  columnId,
+  setIsOpen,
+}: {
+  columnId: string;
+
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}) => {
   const [itemName, setItemName] = useState("");
   const [itemDescription, setItemDescription] = useState("");
-  const [date, setDate] = useState<Date>();
+  const [date, setDate] = useState<string | undefined>();
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -289,6 +299,7 @@ const DialogContentForItemCreation = ({ columnId }: { columnId: string }) => {
     isLoading: isLoadingAddSingleItemInColumn,
   } = trpc.addSingleItemInColumn.useMutation({
     onSuccess(data, variables, context) {
+      setIsOpen(false);
       utils.getAllItemsOfAColumn.invalidate();
       return toast({
         title: "Item Added",
@@ -325,14 +336,17 @@ const DialogContentForItemCreation = ({ columnId }: { columnId: string }) => {
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {date ? format(date, "PPP") : <span>Pick a date</span>}
+            {date ? date : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
-            selected={date}
-            onSelect={setDate}
+            selected={date ? parse(date, "dd-MMM-yyyy", new Date()) : undefined}
+            onSelect={(e) => {
+              if (!e) return;
+              setDate(format(e, "dd-MMM-yyyy"));
+            }}
             initialFocus
           />
         </PopoverContent>
@@ -369,7 +383,7 @@ const DialogContentForItemCreation = ({ columnId }: { columnId: string }) => {
               name: itemName,
               description: itemDescription,
               columnId: columnId,
-              dueDate: date ? date.toLocaleDateString() : undefined,
+              dueDate: date ? date : undefined,
             });
           }}
         >
@@ -389,24 +403,261 @@ const ItemsOfColumn = ({
   itemId: string;
   itemName: string;
   itemDescription: string;
-  dueDate: Date | null;
+  dueDate: string | null;
 }) => {
+  const [deletingId, setDeletingId] = useState("");
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+
+  const {
+    mutate: deleteSingleItemInColumn,
+    isLoading: isLoadingDeleteSingleItemInColumn,
+  } = trpc.deleteSingleItemInColumn.useMutation({
+    onSuccess(data, variables, context) {
+      utils.getAllItemsOfAColumn.invalidate();
+      return toast({
+        title: "Deleted",
+      });
+    },
+    onSettled(data, error, variables, context) {
+      setDeletingId("");
+    },
+  });
   return (
     <div className="w-full bg-zinc-300 p-2">
       <div className="flex justify-between items-center border-b pb-1 border-zinc-700">
         <p className="text-lg font-semibold">{itemName}</p>
-        <div className="flex gap-2">
-          <Button>Edit</Button>
-          <Button variant={"destructive"}>Delete</Button>
+        <div className="flex gap-2 items-center">
+          <EditSingleItem
+            itemId={itemId}
+            itemName={itemName}
+            itemDescription={itemDescription}
+            dueDate={dueDate}
+          />
+          {deletingId !== itemId && (
+            <Button
+              onClick={() => {
+                //
+                setDeletingId(itemId);
+                deleteSingleItemInColumn({
+                  itemId: itemId,
+                });
+              }}
+              variant={"destructive"}
+              className="p-2 py-0 h-min"
+            >
+              Delete
+            </Button>
+          )}
+          {isLoadingDeleteSingleItemInColumn && deletingId === itemId && (
+            <Button
+              className="p-2 py-0 h-5"
+              onClick={() => {
+                //
+                // deleteSingleKanbanBoard({
+                //   id: each.id,
+                // });
+              }}
+              variant={"destructive"}
+            >
+              <Loader2 className="h-5 py-[1px]  w-10 animate-spin" />
+            </Button>
+          )}
         </div>
       </div>
       <div className="">{itemDescription}</div>
       <div className=" ">
         <p className="text-center bg-zinc-800 w-max mx-auto mt-2 px-2 rounded-md text-zinc-200">
-          {dueDate
-            ? `Due date: ${dueDate.toLocaleDateString()}`
-            : "No due date"}
+          {dueDate ? `Due date: ${dueDate}` : "No due date"}
         </p>
+      </div>
+    </div>
+  );
+};
+
+const EditSingleItem = ({
+  itemId,
+  itemName,
+  itemDescription,
+  dueDate,
+}: {
+  itemId: string;
+  itemName: string;
+  itemDescription: string;
+  dueDate: string | null;
+}) => {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(v) => {
+        if (!v) {
+          setIsOpen(v);
+        }
+      }}
+    >
+      <DialogTrigger
+        onClick={() => {
+          setIsOpen(true);
+        }}
+        asChild
+      >
+        <Button className="p-2 py-0 h-min">Edit</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogContentForItemEditing
+          itemId={itemId}
+          itemName={itemName}
+          itemDescription={itemDescription}
+          dueDate={dueDate ? dueDate : undefined}
+          setIsOpen={setIsOpen}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const DialogContentForItemEditing = ({
+  itemId,
+  itemName,
+  itemDescription,
+  dueDate,
+  setIsOpen,
+}: {
+  itemId: string;
+  itemName: string;
+  itemDescription: string;
+  dueDate: string | undefined;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}) => {
+  const [newItemName, setNewItemName] = useState(itemName);
+  const [newItemDescription, setNewItemDescription] = useState(itemDescription);
+  const [newDate, setNewDate] = useState<string | undefined>(dueDate);
+
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+
+  const {
+    mutate: editSingleItemInColumn,
+    isLoading: isLoadingEditSingleItemInColumn,
+  } = trpc.editSingleItemInColumn.useMutation({
+    onSuccess(data, variables, context) {
+      setIsOpen(false);
+      utils.getAllItemsOfAColumn.invalidate();
+      return toast({
+        title: "Update Success",
+      });
+    },
+  });
+
+  return (
+    <div className="mt-1 flex flex-col gap-4">
+      <h2 className="mx-auto font-semibold">Edit your kanban item</h2>
+      <Input
+        placeholder={itemName}
+        value={newItemName}
+        onChange={(e) => {
+          setNewItemName(e.target.value);
+        }}
+      />
+      <Textarea
+        value={newItemDescription}
+        onChange={(e) => {
+          setNewItemDescription(e.target.value);
+        }}
+        minRows={4}
+        maxRows={8}
+        placeholder={itemDescription}
+      />
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={"outline"}
+            className={cn(
+              "w-[280px] justify-start text-left font-normal",
+              !newDate && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {newDate ? newDate : <span>Pick a date</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={
+              newDate ? parse(newDate, "dd-MMM-yyyy", new Date()) : undefined
+            }
+            onSelect={(e) => {
+              if (!e) return;
+              setNewDate(format(e, "dd-MMM-yyyy"));
+            }}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+
+      <div className="w-full flex gap-2 justify-end">
+        {
+          <>
+            {!isLoadingEditSingleItemInColumn && (
+              <Button
+                variant={"outline"}
+                onClick={() => {
+                  //
+                  setIsOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+            {!isLoadingEditSingleItemInColumn && (
+              <Button
+                onClick={() => {
+                  //
+                  if (newItemName === "" || newItemName.length < 3) {
+                    return toast({
+                      title: "Name too short",
+                      description:
+                        "Please provide a name longer than 3 characters",
+                      variant: "destructive",
+                    });
+                  }
+                  if (
+                    newItemDescription === "" ||
+                    newItemDescription.length < 5
+                  ) {
+                    return toast({
+                      title: "Description too short",
+                      description:
+                        "Please provide a description longer than 5 characters",
+                      variant: "destructive",
+                    });
+                  }
+
+                  editSingleItemInColumn({
+                    itemId: itemId,
+                    newItemName: newItemName,
+                    newItemDescription: newItemDescription,
+                    newDueDate: newDate ? newDate : undefined,
+                  });
+                }}
+              >
+                Save
+              </Button>
+            )}
+            {isLoadingEditSingleItemInColumn && (
+              <div
+                className={buttonVariants({
+                  className: "",
+                })}
+              >
+                <Loader2 className=" w-16 h-4  animate-spin" />
+              </div>
+            )}
+          </>
+        }
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ model KanbanItem {
   id             String        @id @default(cuid()) @map("_id")
   name           String
   description    String
-  dueDate        DateTime?
+  dueDate        String?
   KanbanColumn   KanbanColumn? @relation(fields: [kanbanColumnId], references: [id])
   kanbanColumnId String?
 }
