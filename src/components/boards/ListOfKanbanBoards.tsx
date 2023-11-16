@@ -52,7 +52,13 @@ const ListOfKanbanBoards = () => {
                   key={each.id}
                   className="mx-auto w-[48rem] flex justify-between items-center ring-1 ring-zinc-600 p-1 rounded-md"
                 >
-                  <p className="truncate pl-2 font-semibold">{each.name}</p>
+                  <p className="truncate pl-2 font-semibold w-40 text-left ">
+                    {each.name}
+                  </p>
+
+                  <p className="truncate pl-2 font-semibold text-left  flex-1">
+                    |&nbsp;{each.description}
+                  </p>
                   <div className="flex gap-2">
                     <Link href={`/kanbanid/${encodeURIComponent(each.id)}`}>
                       <Button
