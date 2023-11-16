@@ -69,13 +69,13 @@ const Kanban = ({ kanbanid }: { kanbanid: string }) => {
   return (
     <DragDropContext
       onDragEnd={(dropResult) => {
-        setScreenLoading(true);
-        console.log(dropResult);
         if (
           dropResult.destination?.droppableId === dropResult.source.droppableId
         ) {
           return;
         }
+        setScreenLoading(true);
+        console.log(dropResult);
         dragnDropItemBetweenColumns({
           itemId: dropResult.draggableId,
           destinationColumnId:
